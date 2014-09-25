@@ -23,7 +23,8 @@ import com.liferay.portal.kernel.workflow.WorkflowConstants;
 /**
  * @author Peter Shin
  */
-public class KBArticleMainUpgradeColumnImpl extends BaseUpgradeColumnImpl {
+public class KBArticleMainUpgradeColumnImpl
+	extends BaseKBArticleUpgradeColumnImpl {
 
 	public KBArticleMainUpgradeColumnImpl(
 		UpgradeColumn kbArticleIdColumn, UpgradeColumn resourcePrimKeyColumn) {
@@ -39,7 +40,7 @@ public class KBArticleMainUpgradeColumnImpl extends BaseUpgradeColumnImpl {
 		Long kbArticleId = (Long)_kbArticleIdColumn.getOldValue();
 		Long resourcePrimKey = (Long)_resourcePrimKeyColumn.getOldValue();
 
-		KBArticle kbArticle = KBArticleLocalServiceUtil.getLatestKBArticle(
+		KBArticle kbArticle = getLatestKBArticle(
 			resourcePrimKey, WorkflowConstants.STATUS_ANY);
 
 		if (kbArticle.isApproved()) {
@@ -50,7 +51,7 @@ public class KBArticleMainUpgradeColumnImpl extends BaseUpgradeColumnImpl {
 			return Boolean.FALSE;
 		}
 
-		kbArticle = KBArticleLocalServiceUtil.getLatestKBArticle(
+		kbArticle = getLatestKBArticle(
 			resourcePrimKey, WorkflowConstants.STATUS_APPROVED);
 
 		if (kbArticle.getKbArticleId() != kbArticleId) {

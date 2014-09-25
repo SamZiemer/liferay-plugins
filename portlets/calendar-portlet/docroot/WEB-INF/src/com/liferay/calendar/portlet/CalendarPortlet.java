@@ -30,6 +30,7 @@ import com.liferay.calendar.notification.NotificationTemplateContextFactory;
 import com.liferay.calendar.notification.NotificationTemplateType;
 import com.liferay.calendar.notification.NotificationType;
 import com.liferay.calendar.recurrence.Frequency;
+import com.liferay.calendar.recurrence.PositionalWeekday;
 import com.liferay.calendar.recurrence.Recurrence;
 import com.liferay.calendar.recurrence.RecurrenceSerializer;
 import com.liferay.calendar.recurrence.Weekday;
@@ -321,8 +322,6 @@ public class CalendarPortlet extends MVCPortlet {
 
 		CalendarBooking calendarBooking = null;
 
-		String redirect = getRedirect(actionRequest, actionResponse);
-
 		if (calendarBookingId <= 0) {
 			calendarBooking = CalendarBookingServiceUtil.addCalendarBooking(
 				calendarId, childCalendarIds,
@@ -332,12 +331,11 @@ public class CalendarPortlet extends MVCPortlet {
 				endTimeJCalendar.getTimeInMillis(), allDay, recurrence,
 				reminders[0], remindersType[0], reminders[1], remindersType[1],
 				serviceContext);
-
-			redirect = HttpUtil.setParameter(
-				redirect, actionResponse.getNamespace() + "calendarBookingId",
-				calendarBooking.getCalendarBookingId());
 		}
 		else {
+			int instanceIndex = ParamUtil.getInteger(
+				actionRequest, "instanceIndex");
+
 			boolean updateCalendarBookingInstance = ParamUtil.getBoolean(
 				actionRequest, "updateCalendarBookingInstance");
 
@@ -346,8 +344,6 @@ public class CalendarPortlet extends MVCPortlet {
 					CalendarBookingLocalServiceUtil.getCalendarBooking(
 						calendarBookingId);
 
-				int instanceIndex = ParamUtil.getInteger(
-					actionRequest, "instanceIndex");
 				boolean allFollowing = ParamUtil.getBoolean(
 					actionRequest, "allFollowing");
 
@@ -361,8 +357,9 @@ public class CalendarPortlet extends MVCPortlet {
 						reminders[1], remindersType[1], status, serviceContext);
 			}
 			else {
-				calendarBooking = CalendarBookingServiceUtil.getCalendarBooking(
-					calendarBookingId);
+				calendarBooking =
+					CalendarBookingServiceUtil.getCalendarBookingInstance(
+						calendarBookingId, instanceIndex);
 
 				long duration =
 					(endTimeJCalendar.getTimeInMillis() -
@@ -387,7 +384,12 @@ public class CalendarPortlet extends MVCPortlet {
 			}
 		}
 
-		actionRequest.setAttribute(WebKeys.CALENDAR_BOOKING, calendarBooking);
+		String redirect = getRedirect(actionRequest, actionResponse);
+
+		redirect = HttpUtil.setParameter(
+			redirect, actionResponse.getNamespace() + "calendarBookingId",
+			calendarBooking.getCalendarBookingId());
+
 		actionRequest.setAttribute(WebKeys.REDIRECT, redirect);
 	}
 
@@ -738,7 +740,8 @@ public class CalendarPortlet extends MVCPortlet {
 
 		recurrence.setUntilJCalendar(untilJCalendar);
 
-		List<Weekday> weekdays = new ArrayList<Weekday>();
+		List<PositionalWeekday> positionalWeekdays =
+			new ArrayList<PositionalWeekday>();
 
 		if (frequency == Frequency.WEEKLY) {
 			for (Weekday weekday : Weekday.values()) {
@@ -746,12 +749,28 @@ public class CalendarPortlet extends MVCPortlet {
 					actionRequest, weekday.getValue());
 
 				if (checked) {
-					weekdays.add(weekday);
+					positionalWeekdays.add(new PositionalWeekday(weekday, 0));
 				}
 			}
 		}
+		else if ((frequency == Frequency.MONTHLY) ||
+				 (frequency == Frequency.YEARLY)) {
 
-		recurrence.setWeekdays(weekdays);
+			boolean repeatOnWeekday = ParamUtil.getBoolean(
+				actionRequest, "repeatOnWeekday");
+
+			if (repeatOnWeekday) {
+				int position = ParamUtil.getInteger(actionRequest, "position");
+
+				Weekday weekday = Weekday.parse(
+					ParamUtil.getString(actionRequest, "weekday"));
+
+				positionalWeekdays.add(
+					new PositionalWeekday(weekday, position));
+			}
+		}
+
+		recurrence.setPositionalWeekdays(positionalWeekdays);
 
 		String[] exceptionDates = StringUtil.split(
 			ParamUtil.getString(actionRequest, "exceptionDates"));
@@ -952,7 +971,7 @@ public class CalendarPortlet extends MVCPortlet {
 		if (calendarIds.length > 0) {
 			JSONObject jsonObject = CalendarUtil.getCalendarRenderingRules(
 				themeDisplay, calendarIds, statuses, startTime, endTime,
-				ruleName);
+				ruleName, getTimeZone(resourceRequest));
 
 			writeJSON(resourceRequest, resourceResponse, jsonObject);
 		}

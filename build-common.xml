@@ -54,6 +54,7 @@
 		<path refid="plugin-lib.classpath" />
 		<fileset dir="${app.server.lib.global.dir}" includes="*.jar" />
 		<fileset dir="${app.server.lib.portal.dir}" includes="annotations.jar,commons-logging.jar,log4j.jar,util-bridges.jar,util-java.jar,util-taglib.jar" />
+		<fileset dir="${sdk.dir}/dependencies/aQute.bnd/lib" includes="*.jar" />
 		<fileset dir="${sdk.dir}/lib" includes="activation.jar,javax.servlet-api.jar,jsp-api.jar,mail.jar" />
 	</path>
 
@@ -574,6 +575,10 @@ Error-Prone was automatically installed. Please rerun your task.
 
 			<var name="compile-import-shared.import.compat.shared" unset="true" />
 			<var name="compile-import-shared.import.shared" unset="true" />
+
+			<set-module-properties
+				module.dir="@{module.dir}"
+			/>
 		</sequential>
 	</macrodef>
 
@@ -823,6 +828,8 @@ Please find a solution that does not require portal-impl.jar.
 									</tokenfilter>
 								</filterchain>
 							</copy>
+
+							<var name="language.properties.elements" unset="true" />
 						</then>
 					</if>
 				</then>
@@ -1671,7 +1678,11 @@ Please find a solution that does not require portal-impl.jar.
 									<if>
 										<available file="${temp.deployed.plugin.dir}" />
 										<then>
-											<jar destfile="${sdk.dir}/dist/${plugin.name}-${plugin.full.version}.war" update="true">
+											<jar destfile="${sdk.dir}/dist/${plugin.name}-${plugin.full.version}.war" duplicate="preserve" update="true">
+												<fileset
+													dir="${app.server.portal.dir}"
+													includes="WEB-INF/tld/c.tld"
+												/>
 												<fileset
 													dir="${temp.deployed.plugin.dir}"
 													includes="WEB-INF/web.xml"
@@ -1773,8 +1784,7 @@ Please find a solution that does not require portal-impl.jar.
 							<uptodate srcfile="@{module.dir}/${merge.original.war.file}" targetfile="@{module.dir}/tmp" />
 						</not>
 						<then>
-							<delete dir="@{module.dir}/tmp" />
-							<mkdir dir="@{module.dir}/tmp" />
+							<remake-dir dir="@{module.dir}/tmp" />
 
 							<mkdir dir="@{module.dir}/tmp/WEB-INF/classes" />
 							<mkdir dir="@{module.dir}/tmp/WEB-INF/lib" />
@@ -1817,6 +1827,16 @@ Please find a solution that does not require portal-impl.jar.
 			/>
 
 			<var name="merge-unzip.original.war.file" unset="true" />
+		</sequential>
+	</macrodef>
+
+	<macrodef name="remake-dir">
+		<attribute name="dir" />
+
+		<sequential>
+			<delete dir="@{dir}" />
+
+			<mkdir dir="@{dir}" />
 		</sequential>
 	</macrodef>
 
@@ -2089,6 +2109,7 @@ Please find a solution that does not require portal-impl.jar.
 								<jvmarg value="-Dexternal-properties=${test.properties}" />
 								<jvmarg value="-Dfile.encoding=UTF-8" />
 								<jvmarg value="-Djava.net.preferIPv4Stack=true" />
+								<jvmarg value="-Dsdk.dir=${sdk.dir}" />
 								<jvmarg value="-Duser.timezone=GMT" />
 								<classpath location="@{module.dir}/test-coverage" />
 								<classpath refid="test.classpath" />
@@ -2249,34 +2270,6 @@ for (String path : paths) {
 						module.dirs="@{module.dir}"
 						target.name="jar"
 					/>
-
-					<if>
-						<available file="@{module.dir}/docroot/WEB-INF/portlet.xml" />
-						<then>
-							<tstamp>
-								<format property="tstamp.value" pattern="yyyyMMddkkmmssSSS" />
-							</tstamp>
-
-							<move file="${plugin.file}" tofile="${sdk.dir}/dist/${plugin.name}-${plugin.full.version}.war" />
-
-							<direct-deploy-portlet-cmd
-								direct.deploy.dir="${tstamp.value}"
-								module.dir="@{module.dir}"
-							/>
-
-							<zip destfile="${sdk.dir}/dist/${plugin.name}-${plugin.full.version}.war" update="true">
-								<zipfileset
-									dir="${tstamp.value}/${plugin.name}"
-									fullpath="WEB-INF/web.xml"
-									includes="WEB-INF/web.xml"
-								/>
-							</zip>
-
-							<move file="${sdk.dir}/dist/${plugin.name}-${plugin.full.version}.war" tofile="${plugin.file}" />
-
-							<delete dir="${tstamp.value}" />
-						</then>
-					</if>
 				</then>
 				<else>
 					<if>

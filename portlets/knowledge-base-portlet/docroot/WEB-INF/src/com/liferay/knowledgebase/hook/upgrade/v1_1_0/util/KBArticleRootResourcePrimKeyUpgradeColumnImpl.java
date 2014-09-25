@@ -24,7 +24,7 @@ import com.liferay.portal.kernel.workflow.WorkflowConstants;
  * @author Peter Shin
  */
 public class KBArticleRootResourcePrimKeyUpgradeColumnImpl
-	extends BaseUpgradeColumnImpl {
+	extends BaseKBArticleUpgradeColumnImpl {
 
 	public KBArticleRootResourcePrimKeyUpgradeColumnImpl(
 		UpgradeColumn resourcePrimKeyColumn) {
@@ -38,11 +38,11 @@ public class KBArticleRootResourcePrimKeyUpgradeColumnImpl
 	public Object getNewValue(Object oldValue) throws Exception {
 		Long resourcePrimKey = (Long)_resourcePrimKeyColumn.getOldValue();
 
-		KBArticle kbArticle = KBArticleLocalServiceUtil.getLatestKBArticle(
+		KBArticle kbArticle = getLatestKBArticle(
 			resourcePrimKey, WorkflowConstants.STATUS_ANY);
 
 		while (!kbArticle.isRoot()) {
-			kbArticle = KBArticleLocalServiceUtil.getLatestKBArticle(
+			kbArticle = getLatestKBArticle(
 				kbArticle.getParentResourcePrimKey(),
 				WorkflowConstants.STATUS_ANY);
 		}
